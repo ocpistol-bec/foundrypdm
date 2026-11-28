@@ -25,6 +25,7 @@ mod error;
 mod mail;
 mod onshape;
 mod portal;
+mod reading_font;
 mod routes;
 mod session;
 mod state;

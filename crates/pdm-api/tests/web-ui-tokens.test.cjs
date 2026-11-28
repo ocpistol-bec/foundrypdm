@@ -107,7 +107,7 @@ test("the shared :root block holds only scale tokens, never a theme token", () =
   for (const [name] of declarations(scaleBlocks[0].body)){
     assert(name.startsWith("--"), ":root declares " + name + "; only scale tokens belong there");
     assert(!THEME_TOKEN_NAMES.has(name), name + " is in a theme block and in :root (the later one wins in every theme)");
-    assert.match(name, /^--(sp|r|fs|lh)-/, name + " in :root is not a spacing, radius, type or line-height token");
+    assert.match(name, /^--(sp|r|fs|lh|font)-/, name + " in :root is not a spacing, radius, type, line-height or font token");
   }
   // No other rule redefines a theme token: it would silently override some themes.
   for (const r of RULES){
@@ -205,6 +205,58 @@ test("the literal check sees fallbacks of unknown tokens and other color forms",
   assert.deepEqual(parseRules("@layer x { .a { color:#123456 } } .b { .c & { background:red } }")
     .map(r => r.selector + ":" + literalsIn([...declarations(r.body).values()].join(" ")).join()),
     [".a:#123456", ".c &:red"]);
+});
+
+// ── Font stacks stay in the font tokens (guideline Y1) ──────────────────
+// font-family is exactly var(--font-ui) or var(--font-mono); the font shorthand is style, weight, size and
+// line height followed by one of them. The stacks live in :root and in the html[data-font-*] rules
+// that a user's font choice turns on.
+const FONT_TOKEN = /var\(--font-(?:ui|mono)\)/.source;
+const FONT_OK = {
+  "font-family": new RegExp("^" + FONT_TOKEN + "$"),
+  "font": new RegExp(/^(?:(?:normal|italic|oblique|bold|bolder|lighter|small-caps|[1-9]00)\s+)*/.source +
+    /[\d.]+(?:px|r?em|%)(?:\/[\d.]+(?:px|r?em|%)?)?\s+/.source + FONT_TOKEN + "$"),
+};
+const fontOk = (prop, value) => /^(?:inherit|initial|unset|revert)$/.test(value) || FONT_OK[prop].test(value);
+function fontStacksIn(name, src){
+  const found = [];
+  for (const r of parseRules(src)) for (const [prop, value] of declarations(r.body)){
+    if (prop.startsWith("--font-")){
+      if (r.selector !== SCALE_SELECTOR && !/^html\[data-font-(?:ui|mono)="[\w-]+"\]$/.test(r.selector))
+        found.push(name + ": " + r.selector + " sets " + prop);
+    } else if (FONT_OK[prop] && !fontOk(prop, value)) found.push(name + ": " + r.selector + " { " + prop + ":" + value + " }");
+  }
+  return found;
+}
+// Inline styles and attributes built in markup or scripts.
+function inlineFontsIn(name, src){
+  const found = [];
+  for (const m of src.matchAll(/font-family\s*[:=]|\.fontFamily\b/gi)) found.push(name + ": " + m[0]);
+  for (const m of src.matchAll(/\bfont\s*:\s*([^;"'<>]+)/g)) if (!fontOk("font", m[1].trim())) found.push(name + ": " + m[0]);
+  return found;
+}
+const styleBlocks = html => [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map(m => m[1]).join("\n");
+
+test("font-family and font use --font-ui or --font-mono, never a stack of their own", () => {
+  const read = file => fs.readFileSync(path.join(STATIC, file), "utf8");
+  const onshape = read("onshape.html");
+  const found = [
+    ...fontStacksIn("style.css", css),
+    ...fontStacksIn("editors.css", read("editors.css")),
+    ...fontStacksIn("index.html", styleBlocks(indexHtml)),
+    ...fontStacksIn("onshape.html", styleBlocks(onshape)),
+  ];
+  for (const [name, src] of [["app.js", app], ["editors.js", read("editors.js")], ["index.html", indexHtml], ["onshape.html", onshape]])
+    found.push(...inlineFontsIn(name, src));
+  assert.deepEqual(found, [], "use var(--font-ui) or var(--font-mono); a new face belongs in the font tokens");
+  // The check itself: tokens and inherit pass; stacks, names beside or inside a token, and stray token definitions fail.
+  assert.deepEqual(fontStacksIn("t", ".a { font:600 10px var(--font-mono) } .b { font:14px/1.5 var(--font-ui) }" +
+    " .c { font:inherit } .d { font-family:var(--font-mono) } .e { font:11px ui-monospace,monospace }" +
+    " .f { font-family:\"Comic Sans MS\", var(--font-ui) } .g { font:12px Arial, var(--font-mono) }" +
+    " .h { font-family:var(--font-ui, Arial) } .i { --font-ui:serif } :root { --font-mono:monospace }").map(f => f.split(" ")[1]),
+  [".e", ".f", ".g", ".h", ".i"]);
+  assert.deepEqual(inlineFontsIn("t", "style='font:12px Arial' <text font-family=\"monospace\"> el.style.fontFamily = x;" +
+    " style='font:11px var(--font-mono)' toast(\"Font: saved\")").length, 3);
 });
 
 // The fixes this change makes, so a later edit cannot quietly put the old values back.

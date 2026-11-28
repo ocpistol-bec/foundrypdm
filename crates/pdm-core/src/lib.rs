@@ -16,6 +16,7 @@ use uuid::Uuid;
 
 pub mod branding;
 pub mod gcode;
+pub mod reading_font;
 
 // ── Error ────────────────────────────────────────────────────────────────
 

@@ -114,6 +114,18 @@ organization's name and logo are never shown to another's users.
 The 413 answers and malformed-JSON errors on these routes come from the HTTP layer as plain
 text, not the `{ "error": … }` shape.
 
+### Reading font (`crates/pdm-api/src/reading_font.rs`)
+The organization's default font for the web portal, used for members who have not picked a font
+of their own in Settings (a member's own choice wins). Reads are open to any signed-in caller;
+writes are admin-only (403 otherwise) and are audited (`org.reading_font_updated`, object type
+`organization`).
+- `GET /settings/reading-font` → `{ ui, mono }`: `ui` is the face for reading text, `mono` the
+  face for identifiers and codes. Each is `system` (the device's own font; the default) or
+  `atkinson` (Atkinson Hyperlegible Next / Mono, bundled with the portal under `static/fonts/`).
+- `PUT /settings/reading-font` (admin) `{ ui, mono }` → the stored value. Both fields are
+  required; any other face or field returns **400** and nothing is saved. The role is checked before
+  the body is read (a non-admin always gets 403); bodies over 4 KiB get **413**.
+
 ## Gaps (roadmap)
 - **Pagination** on list endpoints (currently unbounded).
 - **Comments** (`GET/POST /items/{id}/comments`) — schema exists (0004), API not exposed.

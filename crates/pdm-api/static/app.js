@@ -497,6 +497,7 @@ async function enterWorkspace(){
     : "service account";
   $("userkebab").hidden = !u;
   document.querySelectorAll(".sb-admin").forEach(a => a.hidden = !(u && u.role === "admin"));
+  refreshOrgFont();
   try {
     const d = await api("GET", "/version");
     const parts = [d.version ? "v" + d.version : null, d.build, d.commit].filter(Boolean);
@@ -894,6 +895,7 @@ const EVENT_LABELS = {
   "laser_nest.cancel":"cancelled a laser nest",
   "org.branding_updated":"changed the branding colors", "org.branding_reset":"reset the branding",
   "org.branding_logo_set":"uploaded a new logo", "org.branding_logo_cleared":"removed the logo",
+  "org.reading_font_updated":"changed the organization's default font",
 };
 // The event as HTML: its phrase with the object linked, or the humanised code.
 function eventSentence(ev, targetHtml){
@@ -4222,6 +4224,155 @@ function wireThemePicker(root){
   });
 }
 
+// ── fonts ───────────────────────────────────────────────────────────────
+// Font choices beside the theme. Each member picks per browser; "Organization default", the
+// default, follows the faces an admin set for the organization (GET /settings/reading-font,
+// cached in localStorage as pdm_org_font so the next page load paints with it). index.html's
+// <head> script resolves the same keys, ids and cache before first paint; keep the two in step
+// (tests/web-ui-fonts.test.cjs checks this). style.css maps each face id to a bundled face.
+function fontSettings(){
+  return [
+    { key:"pdm_font_ui", org:"ui", attr:"data-font-ui", id:"font-ui", label:"Reading font",
+      hint:"Menus, tables, forms and messages.",
+      options:[{ id:"system", name:"System default" }, { id:"atkinson", name:"Atkinson Hyperlegible Next" }] },
+    { key:"pdm_font_mono", org:"mono", attr:"data-font-mono", id:"font-mono", label:"Code font",
+      hint:"Part numbers, revisions, file hashes and other codes.",
+      options:[{ id:"system", name:"System default" }, { id:"atkinson", name:"Atkinson Hyperlegible Mono" }] }
+  ];
+}
+// The organization's default faces as last fetched ({ ui, mono }), or {} when unknown.
+function orgFont(){
+  try { const v = JSON.parse(localStorage.getItem("pdm_org_font")); return v && typeof v === "object" ? v : {}; }
+  catch (e){ return {}; }
+}
+function orgFace(setting, org){
+  return setting.options.some(o => o.id === org[setting.org]) ? org[setting.org] : "system";
+}
+function orgOptionName(setting, org){
+  return "Organization default (" + setting.options.find(o => o.id === orgFace(setting, org)).name + ")";
+}
+// The member's own choice, or "org" when they follow the organization default.
+function currentFont(setting){
+  const id = localStorage.getItem(setting.key);
+  return setting.options.some(o => o.id === id) ? id : "org";
+}
+function effectiveFont(setting){
+  const own = currentFont(setting);
+  return own === "org" ? orgFace(setting, orgFont()) : own;
+}
+function applyFonts(){
+  for (const s of fontSettings()){
+    const id = effectiveFont(s);
+    if (id === "system") document.documentElement.removeAttribute(s.attr);
+    else document.documentElement.setAttribute(s.attr, id);
+  }
+}
+// A face id is the member's own choice; anything else ("org") follows the organization again.
+function applyFont(setting, id){
+  if (setting.options.some(o => o.id === id)) localStorage.setItem(setting.key, id);
+  else localStorage.removeItem(setting.key);
+  applyFonts();
+}
+function fontPickerHTML(){
+  const org = orgFont();
+  return fontSettings().map(s => {
+    const cur = currentFont(s);
+    const opts = [{ id:"org", name:orgOptionName(s, org) }].concat(s.options);
+    return "<div class='row'><label for='" + s.id + "'>" + esc(s.label) + "</label>" +
+      "<select id='" + s.id + "' data-font-key='" + s.key + "' aria-describedby='" + s.id + "-hint'>" +
+      opts.map(o => "<option value='" + o.id + "'" + (o.id === cur ? " selected" : "") + ">" + esc(o.name) + "</option>").join("") +
+      "</select></div><p class='dim' id='" + s.id + "-hint'>" + esc(s.hint) +
+      " Default: Organization default, which is System default (your device's own font) until an admin picks another.</p>";
+  }).join("") +
+    "<p class='dim'>Atkinson Hyperlegible is designed so that similar characters, such as 0 and O or 1, l and I, are easy to tell apart. " +
+    "Your font choices are stored in this browser. The fonts come with this server, so nothing is downloaded from the internet.</p>" +
+    (isRole("admin") ? orgFontPickerHTML(org) : "");
+}
+function orgFontPickerHTML(org){
+  return "<p class='dim' id='org-font-hint'><strong>Organization default</strong> (admins): the fonts for everyone in this " +
+    "organization who keeps Organization default above. Default: System default.</p>" +
+    fontSettings().map(s =>
+      "<div class='row'><label for='org-" + s.id + "'>Organization " + esc(s.label.toLowerCase()) + "</label>" +
+      "<select id='org-" + s.id + "' data-org-font='" + s.org + "' aria-describedby='org-font-hint'>" +
+      s.options.map(o => "<option value='" + o.id + "'" + (o.id === orgFace(s, org) ? " selected" : "") + ">" + esc(o.name) + "</option>").join("") +
+      "</select></div>").join("") +
+    "<div class='row'><button type='button' id='org-font-save' disabled>Save organization default</button>" +
+    "<span class='dim' id='org-font-status' role='status'>Loading the current organization default…</span>" +
+    "<button type='button' id='org-font-retry' hidden>Retry</button></div>";
+}
+function wireFontPicker(root){
+  const settings = fontSettings();
+  root.querySelectorAll("[data-font-key]").forEach(sel => {
+    sel.onchange = () => applyFont(settings.find(s => s.key === sel.dataset.fontKey), sel.value);
+  });
+  root.querySelectorAll("[data-org-font]").forEach(sel => { sel.onchange = () => { sel.dataset.edited = "1"; }; });
+  const save = root.querySelector("#org-font-save"), retry = root.querySelector("#org-font-retry");
+  if (save) save.onclick = () => saveOrgFont(root, save);
+  if (retry) retry.onclick = () => loadOrgFont(root);
+  return loadOrgFont(root);
+}
+// Load the organization default into the picker. Save stays off until it has loaded: saving the
+// cached or fallback value would overwrite a default this browser has not seen.
+async function loadOrgFont(root){
+  const save = root.querySelector("#org-font-save"), status = root.querySelector("#org-font-status"),
+    retry = root.querySelector("#org-font-retry");
+  if (status) status.textContent = "Loading the current organization default…";
+  if (retry) retry.hidden = true;
+  const ok = await refreshOrgFont();
+  syncFontPicker(root);
+  if (save) save.disabled = !ok;
+  if (status) status.textContent = ok ? "" : "The current organization default could not be loaded, so it cannot be changed now.";
+  if (retry) retry.hidden = ok;
+  return ok;
+}
+// Show a new organization default in the picker: the "Organization default (…)" labels, and the
+// admin selects unless the admin has started changing them.
+function syncFontPicker(root){
+  const org = orgFont();
+  for (const s of fontSettings()){
+    const opt = root.querySelector("[data-font-key='" + s.key + "'] option[value='org']");
+    if (opt) opt.textContent = orgOptionName(s, org);
+    const sel = root.querySelector("[data-org-font='" + s.org + "']");
+    if (sel && !sel.dataset.edited) sel.value = orgFace(s, org);
+  }
+}
+// The cache records when its value was fetched (or saved), so an older answer cannot replace it.
+function cacheOrgFont(v, at){
+  localStorage.setItem("pdm_org_font", JSON.stringify({ ui:v.ui, mono:v.mono, at:at }));
+}
+// Fetch the organization default, keep it for the next page load and apply it now. An answer to a
+// request that started before the cached value was stored (a save in this browser) is dropped. On
+// failure the cached value (or the system font) stays. Answers whether the value was loaded.
+async function refreshOrgFont(){
+  const started = Date.now();
+  let ok = true;
+  try {
+    const v = await api("GET", "/settings/reading-font");
+    const at = orgFont().at;
+    // A cached time in the future (the clock was set back) counts as no time at all.
+    if (!(at >= started && at <= Date.now())) cacheOrgFont(v, started);
+  } catch (e){ ok = false; }
+  applyFonts();
+  return ok;
+}
+async function saveOrgFont(root, btn){
+  if (btn.disabled) return;
+  const body = {};
+  root.querySelectorAll("[data-org-font]").forEach(sel => { body[sel.dataset.orgFont] = sel.value; });
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = "Saving…";
+  try {
+    cacheOrgFont(await api("PUT", "/settings/reading-font", body), Date.now());
+    root.querySelectorAll("[data-org-font]").forEach(sel => { delete sel.dataset.edited; });
+    applyFonts(); syncFontPicker(root);
+    toast("Organization default font saved", "ok");
+  } catch (e){
+    toast("Organization default font not saved: " + e.message, "err");
+  } finally {
+    btn.disabled = false; btn.textContent = label;
+  }
+}
+
 const GPU_POLICIES = [
   { id:"auto", name:"Auto", desc:"GPU if present, else CPU" },
   { id:"hardware", name:"GPU", desc:"Require the machine GPU" },
@@ -4648,7 +4799,7 @@ async function viewSettings(v){
     "</div>" +
     "<h2 class='sec'>Appearance</h2>" +
     "<div class='card'><p class='dim'>Colour theme for this browser. Stored locally.</p>" +
-    themePickerHTML() + "</div>" +
+    themePickerHTML() + fontPickerHTML() + "</div>" +
     "<h2 class='sec'>Preview renderer</h2>" +
     "<div class='card'><p class='dim'>Transparent product renders use the CPU product-image renderer, with no grid or axes. " +
     "Viewport snapshots retain the original background and use the GPU policy below. Regenerate an existing preview to apply a new style.</p>" +
@@ -4732,6 +4883,7 @@ async function viewSettings(v){
   if (addBtn) addBtn.onclick = () => addPrefix();
   const cpBtn = $("changepw");
   if (cpBtn) cpBtn.onclick = () => changePassword();
+  wireFontPicker(v);
   wireThemePicker(v);
   wireGpuPicker(v, canEdit);
   if ($("preview-style-save")) $("preview-style-save").onclick = async () => {

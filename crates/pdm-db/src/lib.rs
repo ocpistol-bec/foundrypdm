@@ -195,6 +195,41 @@ pub async fn set_preview_style(
     Ok(style.to_string())
 }
 
+// ── Organization default reading font ──────────────────────────────────
+
+/// The org's default reading font (`settings->'reading_font'`); unset or unreadable faces read
+/// as `system`.
+pub async fn get_reading_font(
+    pool: &PgPool,
+    org_id: Uuid,
+) -> Result<pdm_core::reading_font::ReadingFont, PdmError> {
+    let v: Option<serde_json::Value> =
+        sqlx::query_scalar("SELECT settings->'reading_font' FROM organizations WHERE id = $1")
+            .bind(org_id)
+            .fetch_optional(pool)
+            .await
+            .map_err(PdmError::Db)?
+            .flatten();
+    Ok(pdm_core::reading_font::ReadingFont::from_stored(v.as_ref()))
+}
+
+/// Store the org's default reading font (parsed by `ReadingFont::parse`); returns what reads back.
+pub async fn set_reading_font(
+    pool: &PgPool,
+    org_id: Uuid,
+    font: &pdm_core::reading_font::ReadingFont,
+) -> Result<pdm_core::reading_font::ReadingFont, PdmError> {
+    sqlx::query(
+        "UPDATE organizations SET settings = jsonb_set(COALESCE(settings, '{}'::jsonb), '{reading_font}', $1, true) WHERE id = $2",
+    )
+    .bind(font.to_json())
+    .bind(org_id)
+    .execute(pool)
+    .await
+    .map_err(PdmError::Db)?;
+    get_reading_font(pool, org_id).await
+}
+
 // ── Organization branding ──────────────────────────────────────────────
 
 /// Stored branding as read back: an absent or unreadable object gives the default; entries that

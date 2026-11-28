@@ -6061,6 +6061,10 @@ pub fn api_router() -> Router<AppState> {
             get(get_gpu_policy).put(put_gpu_policy),
         )
         .route(
+            "/settings/reading-font",
+            crate::reading_font::method_router(),
+        )
+        .route(
             "/settings/preview-style",
             get(get_preview_style).put(put_preview_style),
         )

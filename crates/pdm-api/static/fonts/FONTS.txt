@@ -1,0 +1,24 @@
+Bundled fonts for the web portal
+================================
+
+Atkinson Hyperlegible Next and Atkinson Hyperlegible Mono
+Designers (from the upstream METADATA.pb): Braille Institute, Applied Design Works, Elliott Scott,
+Megan Eiswerth, Letters From Sweden.
+License: SIL Open Font License 1.1. The full text, with its copyright line, is in OFL.txt beside
+each family. Neither OFL.txt declares a Reserved Font Name.
+
+Source: https://github.com/google/fonts at commit 5026800714d07231937d92eb4cceabf06e05d74e,
+directories ofl/atkinsonhyperlegiblenext and ofl/atkinsonhyperlegiblemono (upstream projects:
+https://github.com/googlefonts/atkinson-hyperlegible-next and
+https://github.com/googlefonts/atkinson-hyperlegible-next-mono).
+
+The files are copied unmodified (variable fonts, weight axis 200 to 800). Only the file names
+changed: "[wght]" became "-VariableFont_wght", so the names need no URL escaping.
+
+SHA-256                                                           file (name in the source; OFL.txt hashed with LF line endings)
+5a455d1cfa099b601ab70751bb9673e8fe1854dc4500c80e1a220d0d75e31745  atkinson-hyperlegible-next/AtkinsonHyperlegibleNext-VariableFont_wght.ttf (AtkinsonHyperlegibleNext[wght].ttf)
+ce9cffed32742ad2d9238c561a93220385e5934cdc02b8eb4097a50efa957dc6  atkinson-hyperlegible-next/AtkinsonHyperlegibleNext-Italic-VariableFont_wght.ttf (AtkinsonHyperlegibleNext-Italic[wght].ttf)
+aca6a428580965d2297d1b718042dd427c2a9443ece3b0d02d758e161e0c4030  atkinson-hyperlegible-next/OFL.txt (OFL.txt)
+5ce8b1698d1ded7dff2178c1a3ad159470085a58ea239e8b2cb88f4fb4a6f646  atkinson-hyperlegible-mono/AtkinsonHyperlegibleMono-VariableFont_wght.ttf (AtkinsonHyperlegibleMono[wght].ttf)
+e18f523877530e4abe229df6a36d394326254da488a7f5abb9b7b5ea8f780cd4  atkinson-hyperlegible-mono/AtkinsonHyperlegibleMono-Italic-VariableFont_wght.ttf (AtkinsonHyperlegibleMono-Italic[wght].ttf)
+1ebb31cf7393164f20d10c1d48406cddb5314feff8465531cf1e4ba37e9dd740  atkinson-hyperlegible-mono/OFL.txt (OFL.txt)

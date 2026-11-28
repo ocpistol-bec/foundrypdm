@@ -84,7 +84,7 @@
 html, body { height:100%; }
 html { background:var(--bg); }
 body { margin:0; background:var(--bg); color:var(--fg);
-  font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  font:14px/1.5 var(--font-ui); }
 a { color:var(--acc); text-decoration:none; }
 button { background:var(--panel2); color:var(--fg); border:1px solid var(--line);
   border-radius:6px; padding:6px 11px; font:inherit; cursor:pointer; }
@@ -108,7 +108,7 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus { outline:none; border-color:var(--acc); }
 .hidden { display:none !important; }
 .muted { color:var(--dim); }
-.mono { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; }
+.mono { font-family:var(--font-mono); font-size:12px; }
 .dim { color:var(--dim); font-size:12px; }
 .grow { flex:1; min-width:0; }
 .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:6px 0; }
@@ -241,7 +241,7 @@ button.tab:focus-visible { outline-offset:-2px; }
 /* ── Badges ── */
 .badge { display:inline-flex; align-items:center; gap:3px; padding:1px 5px; margin-left:6px;
   border:1px solid var(--line); color:var(--dim); border-radius:4px;
-  font:10px ui-monospace,monospace; vertical-align:middle; letter-spacing:.03em; }
+  font:10px var(--font-mono); vertical-align:middle; letter-spacing:.03em; }
 .badge .icon { width:11px; height:11px; stroke-width:1.6; }
 .badge.cad { color:var(--acc); border-color:var(--acc); }
 .badge.img { color:var(--warn); border-color:var(--warn); }
@@ -250,7 +250,7 @@ button.tab:focus-visible { outline-offset:-2px; }
 .badge.sm { color:var(--ok); border-color:var(--ok); }
 .smtype { color:var(--ok); }
 .rev { display:inline-block; padding:1px 6px; margin-left:6px; border:1px solid var(--acc);
-  color:var(--acc); border-radius:4px; font:11px ui-monospace,monospace; vertical-align:middle; }
+  color:var(--acc); border-radius:4px; font:11px var(--font-mono); vertical-align:middle; }
 .rev.wip { border-color:var(--line); color:var(--dim); }
 .state { display:inline-flex; align-items:center; gap:3px; padding:1px 7px; border-radius:999px; font-size:11px;
   border:1px solid var(--line); color:var(--dim); vertical-align:middle; white-space:nowrap; }
@@ -359,7 +359,7 @@ td.pn { color:var(--fg); white-space:nowrap; }
 .pcard .kebab-btn { position:absolute; top:8px; right:8px; }
 tbody tr.archived td { opacity:.6; }
 .arch { display:inline-block; padding:0 5px; margin-left:6px; border:1px solid var(--warn);
-  color:var(--warn); border-radius:4px; font:10px ui-monospace,monospace;
+  color:var(--warn); border-radius:4px; font:10px var(--font-mono);
   vertical-align:middle; letter-spacing:.03em; }
 .kebabmenu { position:fixed; z-index:160; background:var(--panel); border:1px solid var(--line);
   border-radius:8px; box-shadow:var(--shadow); min-width:176px; padding:4px; font-size:13px; }
@@ -433,14 +433,14 @@ dialog.modal-backdrop::backdrop { background:transparent; }
   max-width:none; }
 .pv-canvas img.model-preview { box-shadow:none; background:transparent; }
 .pv-canvas iframe { width:100%; height:100%; border:0; background:#fff; }
-.pv-canvas pre { margin:0; max-width:900px; font:11px ui-monospace,monospace;
+.pv-canvas pre { margin:0; max-width:900px; font:11px var(--font-mono);
   color:var(--dim); overflow:auto; height:100%; }
 .dcard .thumb-lg img { width:100%; height:100%; object-fit:contain; display:block; }
 .pv-side { width:170px; flex:0 0 auto; display:flex; flex-direction:column; gap:8px; }
 .pv-ctl { display:flex; flex-direction:column; gap:6px; }
 .pv-ctl button { text-align:center; font-size:13px; padding:7px; }
 .pv-ctl .zlabel { font-size:11px; color:var(--dim); text-align:center;
-  font-family:ui-monospace,monospace; }
+  font-family:var(--font-mono); }
 .pv-hint { font-size:11.5px; color:var(--dim); line-height:1.5; }
 .pv-empty { height:520px; display:flex; flex-direction:column; gap:10px;
   align-items:center; justify-content:center; background:transparent;
@@ -509,7 +509,26 @@ textarea:focus-visible, [tabindex]:focus-visible, .tab:focus-visible {
   --r-s:6px; --r-m:10px; --r-l:14px;
   --fs-xs:11px; --fs-sm:12px; --fs-base:14px; --fs-lg:16px; --fs-xl:20px; --fs-2xl:24px;
   --lh-tight:1.2; --lh-base:1.5; --lh-loose:1.7;
+  --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:ui-monospace,Menlo,Consolas,monospace;
 }
+
+/* ── Fonts (guidelines Y1, Y2) ──
+   Every font-family in the portal is --font-ui (reading text) or --font-mono (part numbers,
+   hashes and other codes). Settings lets each user pick a bundled face for either one; the
+   <head> script in index.html sets data-font-ui / data-font-mono on <html> before first paint.
+   The faces are SIL Open Font License files in fonts/, each with its license beside it.
+   Nothing is fetched until a user picks a face; then index.html preloads its upright file. */
+@font-face { font-family:"Atkinson Hyperlegible Next"; font-style:normal; font-weight:200 800; font-display:swap;
+  src:url("fonts/atkinson-hyperlegible-next/AtkinsonHyperlegibleNext-VariableFont_wght.ttf") format("truetype"); }
+@font-face { font-family:"Atkinson Hyperlegible Next"; font-style:italic; font-weight:200 800; font-display:swap;
+  src:url("fonts/atkinson-hyperlegible-next/AtkinsonHyperlegibleNext-Italic-VariableFont_wght.ttf") format("truetype"); }
+@font-face { font-family:"Atkinson Hyperlegible Mono"; font-style:normal; font-weight:200 800; font-display:swap;
+  src:url("fonts/atkinson-hyperlegible-mono/AtkinsonHyperlegibleMono-VariableFont_wght.ttf") format("truetype"); }
+@font-face { font-family:"Atkinson Hyperlegible Mono"; font-style:italic; font-weight:200 800; font-display:swap;
+  src:url("fonts/atkinson-hyperlegible-mono/AtkinsonHyperlegibleMono-Italic-VariableFont_wght.ttf") format("truetype"); }
+html[data-font-ui="atkinson"] { --font-ui:"Atkinson Hyperlegible Next",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+html[data-font-mono="atkinson"] { --font-mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,Consolas,monospace; }
 
 /* ── Inline SVG icon sprite (§4.3.13) ── */
 #icons { display:none; width:0; height:0; overflow:hidden; }
@@ -597,7 +616,7 @@ table.dense th, html.dense table th { font-size:10.5px; }
 .feed .event .ic { flex:0 0 auto; width:28px; height:28px; border-radius:9px;
   background:color-mix(in srgb, var(--acc) 16%, var(--panel));
   color:var(--acc); display:grid; place-items:center; font-size:13px;
-  font-family:ui-monospace,monospace; flex-shrink:0; }
+  font-family:var(--font-mono); flex-shrink:0; }
 .feed .event .body { flex:1; min-width:0; }
 .feed .event .who { font-weight:700; font-size:13px; color:var(--text-1); }
 .feed .event .what { color:var(--text-2); font-size:13px; margin-top:2px;
@@ -633,7 +652,7 @@ table.dense th, html.dense table th { font-size:10.5px; }
 .ln-row:hover { background:var(--hover); }
 .ln-row:last-child { border-bottom:none; }
 .ln-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; }
-.ln-status { font:600 10px ui-monospace,monospace; letter-spacing:.03em; padding:1px 6px;
+.ln-status { font:600 10px var(--font-mono); letter-spacing:.03em; padding:1px 6px;
   border:1px solid var(--line); border-radius:4px; text-transform:uppercase; }
 .ln-status.ok { color:var(--ok); border-color:var(--ok); }
 .ln-status.run { color:var(--acc); border-color:var(--acc); }

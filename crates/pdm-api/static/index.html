@@ -5,10 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Foundry PDM — Workspace</title>
 <script>
-// Apply the saved theme before the first paint (app.js applies it again with the same rules).
+// Apply the saved theme and fonts before the first paint (app.js uses the same keys, ids and defaults).
 (function () {
   try { var t = localStorage.getItem("pdm_theme");
     if (["dark", "light", "slate", "contrast"].indexOf(t) >= 0) document.documentElement.setAttribute("data-theme", t);
+    // Each face is the member's own choice, else the organization default app.js cached last time.
+    // A chosen face is fetched now, not when the first text is laid out, so the first paint can use it.
+    var org = {};
+    try { org = JSON.parse(localStorage.getItem("pdm_org_font")) || {}; } catch (e) {}
+    [["pdm_font_ui", "ui", "data-font-ui", "atkinson-hyperlegible-next/AtkinsonHyperlegibleNext-VariableFont_wght.ttf"],
+     ["pdm_font_mono", "mono", "data-font-mono", "atkinson-hyperlegible-mono/AtkinsonHyperlegibleMono-VariableFont_wght.ttf"]].forEach(function (f) {
+      var id = localStorage.getItem(f[0]);
+      if (id !== "system" && id !== "atkinson") id = org[f[1]];
+      if (id !== "atkinson") return;
+      document.documentElement.setAttribute(f[2], "atkinson");
+      var l = document.createElement("link");
+      l.rel = "preload"; l.as = "font"; l.type = "font/ttf"; l.crossOrigin = "anonymous"; l.href = "/static/fonts/" + f[3];
+      document.head.appendChild(l);
+    });
   } catch (e) {}
 })();
 </script>
